@@ -12,6 +12,8 @@ DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', '*').split(',')
 
+CSRF_TRUSTED_ORIGINS = ['https://livzz-backend.azurewebsites.net']
+
 # 2. Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
