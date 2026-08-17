@@ -5,12 +5,12 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-9ey%4fdr4g4fgwlf(1u^1+=+scfukb&dq_2n(7e##(66l4i=1q'
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-9ey%4fdr4g4fgwlf(1u^1+=+scfukb&dq_2n(7e##(66l4i=1q')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', '*').split(',')
 
 # 2. Application definition
 INSTALLED_APPS = [
@@ -20,17 +20,17 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    
+
     # Third Party Apps
     'corsheaders',
-    'rest_framework', 
+    'rest_framework',
     'rest_framework.authtoken',
-    
+
     # Your Apps
     'accounts',
     'rooms',
     'property',
-    'Tenant', 
+    'Tenant',
     'visitor',
     'staff',
     'grocery',
@@ -40,12 +40,13 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    
+
     # MUST be above CommonMiddleware
-    'corsheaders.middleware.CorsMiddleware',  
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
-    
+
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -73,18 +74,21 @@ TEMPLATES = [
 WSGI_APPLICATION = 'smart_pg.wsgi.application'
 
 # 3. Database
+import dj_database_url
+
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(
+        default='sqlite:///' + str(BASE_DIR / 'db.sqlite3'),
+        conn_max_age=600,
+        ssl_require=os.environ.get('DB_SSL_REQUIRE', 'False') == 'True',
+    )
 }
 
 # 4. Authentication
 AUTH_USER_MODEL = 'accounts.User'
 
 # 5. CORS Settings (Updated & Extended)
-CORS_ALLOW_ALL_ORIGINS = True  # Allows all frontend origins in development
+CORS_ALLOW_ALL_ORIGINS = os.environ.get('CORS_ALLOW_ALL_ORIGINS', 'True') == 'True'  # Allows all frontend origins in development
 
 CORS_ALLOW_CREDENTIALS = True
 
@@ -112,6 +116,11 @@ CORS_ALLOW_METHODS = [
 # 6. Static & Media Files
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+STORAGES = {
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
@@ -142,6 +151,6 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.SessionAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny', # Ensures public endpoints like home property views don't return 401
+        'rest_framework.permissions.AllowAny',  # Ensures public endpoints like home property views don't return 401
     ],
 }
