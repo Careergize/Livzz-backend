@@ -3,7 +3,7 @@ from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
 
@@ -117,6 +117,75 @@ class PricingAvailabilityPublishingTests(MarketplaceFixture):
 
 
 class MarketplaceAPITests(MarketplaceFixture):
+    def test_all_public_routes_detail_and_anonymous_access(self):
+        listings = [self.listing(category, published=True)
+                    for category in ('PG', 'APARTMENT', 'VILLA', 'OFFICE')]
+        for path in ('listings/', 'pg/', 'apartments/', 'villas/', 'office/'):
+            response = self.client.get(f'/api/v2/marketplace/{path}')
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response['Content-Type'], 'application/json')
+            self.assertIn('data', response.json())
+            self.assertIn('meta', response.json())
+        detail = self.client.get(f'/api/v2/marketplace/listings/{listings[0].slug}/')
+        self.assertEqual(detail.status_code, 200)
+        self.assertEqual(detail.json()['data']['slug'], listings[0].slug)
+        self.assertEqual(detail.json()['meta'], {})
+
+    def test_coordinate_serialization_uses_only_valid_stored_values(self):
+        valid = self.listing('PG', published=True)
+        valid.property.latitude = 12.9352
+        valid.property.longitude = 77.6245
+        valid.property.save(update_fields=('latitude', 'longitude'))
+        location = self.client.get(f'/api/v2/marketplace/listings/{valid.slug}/').json()['data']['property']['location']
+        self.assertEqual(location['latitude'], 12.9352)
+        self.assertEqual(location['longitude'], 77.6245)
+        self.assertIsInstance(location['latitude'], float)
+
+        missing = self.listing('PG', published=True)
+        location = self.client.get(f'/api/v2/marketplace/listings/{missing.slug}/').json()['data']['property']['location']
+        self.assertIsNone(location['latitude'])
+        self.assertIsNone(location['longitude'])
+
+        Property.objects.filter(pk=missing.property_id).update(latitude=91, longitude=-181)
+        location = self.client.get(f'/api/v2/marketplace/listings/{missing.slug}/').json()['data']['property']['location']
+        self.assertIsNone(location['latitude'])
+        self.assertIsNone(location['longitude'])
+
+    def test_category_filters_and_office_area_ranges(self):
+        prop = self.property('PG', 'Capacity')
+        unit = Unit.objects.create(property=prop, code='C', unit_type='ROOM', capacity=4)
+        pg = Listing.objects.create(organization=self.org, property=prop, category='PG', title='Capacity', slug='capacity')
+        ListingTarget.objects.create(listing=pg, target_type='CAPACITY_POOL', unit=unit, capacity=2)
+        PricePlan.objects.create(listing=pg, amount='9000', effective_from=timezone.now() - timedelta(days=1))
+        PropertyMedia.objects.create(property=prop, file='property_media/real.jpg', is_primary=True)
+        publish_listing(user=self.owner, listing=pg)
+        self.assertEqual(self.client.get('/api/v2/marketplace/pg/?capacity=2').json()['meta']['count'], 1)
+
+        office = self.listing('OFFICE', published=True)
+        details = office.property.officedetails
+        details.total_area = Decimal('1500')
+        details.fitout_status = 'FURNISHED'
+        details.save()
+        response = self.client.get('/api/v2/marketplace/office/?min_area=1000&max_area=2000&furnishing=FURNISHED')
+        self.assertEqual(response.json()['meta']['count'], 1)
+
+    def test_pagination_is_bounded_and_reports_total_pages(self):
+        for _ in range(3):
+            self.listing('PG', published=True)
+        body = self.client.get('/api/v2/marketplace/listings/?page_size=1000').json()
+        self.assertEqual(body['meta']['page_size'], 100)
+        self.assertEqual(body['meta']['page'], 1)
+        self.assertEqual(body['meta']['total_pages'], 1)
+        self.assertEqual(body['meta']['count'], 3)
+
+    @override_settings(CORS_ALLOW_ALL_ORIGINS=False,
+                       CORS_ALLOWED_ORIGINS=['http://localhost:5173', 'https://livzz.example'])
+    def test_cors_allows_configured_frontends_not_arbitrary_origins(self):
+        allowed = self.client.get('/api/v2/marketplace/listings/', HTTP_ORIGIN='http://localhost:5173')
+        denied = self.client.get('/api/v2/marketplace/listings/', HTTP_ORIGIN='https://evil.example')
+        self.assertEqual(allowed['Access-Control-Allow-Origin'], 'http://localhost:5173')
+        self.assertNotIn('Access-Control-Allow-Origin', denied)
+
     def test_public_contract_filters_categories_and_no_fabricated_facts(self):
         pg = self.listing('PG', published=True)
         apartment = self.listing('APARTMENT', published=True)

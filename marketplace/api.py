@@ -76,6 +76,13 @@ def _file_url(request, field):
         return None
 
 
+def _public_coordinate(value, minimum, maximum):
+    """Return only a valid stored coordinate; never infer a replacement."""
+    if value is None or not minimum <= value <= maximum:
+        return None
+    return value
+
+
 class PublicListingSerializer(serializers.ModelSerializer):
     id = serializers.UUIDField(source='public_id')
     property = serializers.SerializerMethodField()
@@ -96,7 +103,8 @@ class PublicListingSerializer(serializers.ModelSerializer):
         return {'id': str(prop.public_id), 'name': prop.name, 'location': {
             'address': prop.address, 'locality': prop.locality or None, 'city': prop.city,
             'state': prop.state, 'country': prop.country, 'postal_code': prop.postal_code or None,
-            'latitude': prop.latitude, 'longitude': prop.longitude,
+            'latitude': _public_coordinate(prop.latitude, -90, 90),
+            'longitude': _public_coordinate(prop.longitude, -180, 180),
         }}
 
     def get_offer(self, obj):
@@ -186,17 +194,21 @@ def public_queryset(request, category=None):
         elif wanted in (Availability.BLOCKED, Availability.UNAVAILABLE):
             qs = qs.annotate(has_state=Exists(active.filter(status=wanted))).filter(has_state=True)
     specific = {
-        'gender_policy': 'property__pgdetails__gender_policy', 'sharing': 'target__capacity', 'meals': 'property__pgdetails__meal_available',
+        'gender_policy': 'property__pgdetails__gender_policy',
+        'sharing': 'target__capacity' if category == 'PG' else None,
+        'meals': 'property__pgdetails__meal_available',
         'minimum_stay': 'current_minimum_stay' if category == 'PG' else None,
         'bedrooms': {'APARTMENT': 'property__apartmentdetails__bedrooms', 'VILLA': 'property__villadetails__bedrooms'}.get(category),
-        'furnishing': {'APARTMENT': 'property__apartmentdetails__furnishing_status', 'VILLA': 'property__villadetails__furnishing_status'}.get(category),
         'preferred_tenant': 'property__apartmentdetails__preferred_tenant_type' if category == 'APARTMENT' else None,
         'parking': 'property__apartmentdetails__parking_available' if category == 'APARTMENT' else None,
         'office_type': 'property__officedetails__office_type' if category == 'OFFICE' else None,
         'lease_type': 'property__officedetails__lease_type' if category == 'OFFICE' else None,
+        'furnishing': ({'APARTMENT': 'property__apartmentdetails__furnishing_status',
+                        'VILLA': 'property__villadetails__furnishing_status',
+                        'OFFICE': 'property__officedetails__fitout_status'}.get(category)),
         'fit_out': 'property__officedetails__fitout_status' if category == 'OFFICE' else None,
         'area': 'property__officedetails__total_area' if category == 'OFFICE' else None,
-        'capacity': 'property__officedetails__total_workstations' if category == 'OFFICE' else None,
+        'capacity': {'PG': 'target__capacity', 'OFFICE': 'property__officedetails__total_workstations'}.get(category),
     }
     for param, field in specific.items():
         if field and params.get(param) is not None:
@@ -207,6 +219,11 @@ def public_queryset(request, category=None):
     if category in ('VILLA', 'OFFICE') and params.get('parking') is not None:
         field = 'property__villadetails__parking_capacity' if category == 'VILLA' else 'property__officedetails__parking_capacity'
         qs = qs.filter(**({f'{field}__gt': 0} if params['parking'].lower() in ('1', 'true', 'yes') else {field: 0}))
+    if category == 'OFFICE':
+        if params.get('min_area'):
+            qs = qs.filter(property__officedetails__total_area__gte=params['min_area'])
+        if params.get('max_area'):
+            qs = qs.filter(property__officedetails__total_area__lte=params['max_area'])
     ordering = {'PRICE_LOW': ('current_amount', 'id'), 'PRICE_HIGH': ('-current_amount', 'id'), 'NEWEST': ('-published_at', 'id')}
     qs = qs.order_by(*ordering.get(params.get('sort', '').upper(), ('-published_at', '-created_at', 'id')))
     return qs.distinct()

@@ -91,8 +91,15 @@ DATABASES = {
 # 4. Authentication
 AUTH_USER_MODEL = 'accounts.User'
 
-# 5. CORS Settings (Updated & Extended)
-CORS_ALLOW_ALL_ORIGINS = os.environ.get('CORS_ALLOW_ALL_ORIGINS', 'True') == 'True'  # Allows all frontend origins in development
+# 5. CORS Settings
+# Django is the authoritative CORS layer. Production must provide the deployed
+# frontend origins as a comma-separated environment variable.
+CORS_ALLOW_ALL_ORIGINS = os.environ.get('CORS_ALLOW_ALL_ORIGINS', str(DEBUG)) == 'True'
+CORS_ALLOWED_ORIGINS = [
+    origin.strip() for origin in os.environ.get(
+        'CORS_ALLOWED_ORIGINS', 'http://localhost:5173'
+    ).split(',') if origin.strip()
+]
 
 CORS_ALLOW_CREDENTIALS = True
 

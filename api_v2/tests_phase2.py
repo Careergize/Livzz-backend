@@ -37,6 +37,16 @@ class Phase2APITests(TestCase):
                 self.assertEqual(response.json()['data']['property_type'], value)
         self.assertEqual(self.create_property('Co-living', 'Legacy input').status_code, 400)
 
+    def test_property_coordinate_ranges_are_validated(self):
+        self.client.force_authenticate(self.owner)
+        url = f'/api/v2/organizations/{self.org.public_id}/properties/'
+        base = {'property_type': 'PG', 'name': 'Coordinates', 'address': 'A',
+                'city': 'Bengaluru', 'state': 'Karnataka'}
+        self.assertEqual(self.client.post(url, {**base, 'latitude': 91}, format='json').status_code, 400)
+        self.assertEqual(self.client.post(url, {**base, 'longitude': -181}, format='json').status_code, 400)
+        response = self.client.post(url, {**base, 'latitude': 12.9352, 'longitude': 77.6245}, format='json')
+        self.assertEqual(response.status_code, 201)
+
     def test_matching_detail_is_created_and_wrong_model_rejected(self):
         response = self.create_property('PG', details={'wifi_available': True, 'gender_policy': 'UNISEX'})
         prop = Property.objects.get(public_id=response.json()['data']['id'])

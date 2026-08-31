@@ -82,6 +82,16 @@ class PropertyWriteSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('Use PG, APARTMENT, VILLA, or OFFICE.')
         return value
 
+    def validate_latitude(self, value):
+        if value is not None and not -90 <= value <= 90:
+            raise serializers.ValidationError('Latitude must be between -90 and 90.')
+        return value
+
+    def validate_longitude(self, value):
+        if value is not None and not -180 <= value <= 180:
+            raise serializers.ValidationError('Longitude must be between -180 and 180.')
+        return value
+
 
 class UnitSerializer(serializers.ModelSerializer):
     id = serializers.UUIDField(source='public_id', read_only=True)

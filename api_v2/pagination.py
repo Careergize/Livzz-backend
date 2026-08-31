@@ -12,4 +12,5 @@ class V2PageNumberPagination(PageNumberPagination):
             'count': self.page.paginator.count,
             'page': self.page.number,
             'page_size': self.get_page_size(self.request),
+            'total_pages': self.page.paginator.num_pages,
         }})
