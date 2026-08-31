@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'maintenance',
     'payments',
     'organizations',
+    'marketplace',
 ]
 
 MIDDLEWARE = [
@@ -120,6 +121,9 @@ CORS_ALLOW_METHODS = [
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },

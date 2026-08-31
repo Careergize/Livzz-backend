@@ -14,9 +14,13 @@ Authorization is centralized in `organizations.access`. Role templates expand to
 
 A property has one current organization and a stable UUID public ID. `Property.owner` remains temporarily for legacy reads. `PropertyOrganizationHistory` supports recording transfers without overwriting prior ownership context; legal transfer workflow is deferred.
 
+## Marketplace
+
+Phase 3 adds `Property -> Listing -> ListingTarget/PricePlan/Availability/ListingMedia`. A property remains a physical asset while a listing is a commercial offer with an independent publishing lifecycle. Anonymous, published-only discovery is available below `/api/v2/marketplace/`; organization-scoped management reuses Phase 1 named permissions and property grants. See [phase-3-marketplace.md](phase-3-marketplace.md).
+
 ## Future boundaries
 
-- Marketplace will expose public published listings and category projections. Phase 1 retains existing active-property discovery only.
+- Legacy active-property discovery remains a compatibility interface and is not the V2 publication source.
 - Reservation and tenancy remain separate future domains: reservations are pre-move-in holds; tenancies represent contractual occupancy.
 - Billing will own invoices, transactions, and allocations. Phase 1 only moves payout configuration to the organization layer and does not fabricate financial history.
 
