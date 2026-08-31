@@ -43,7 +43,7 @@ class SendOTPView(APIView):
             user.save()
             
             # TODO: Send OTP via SMS gateway (Twilio, AWS SNS, etc.)
-            print(f"OTP for {phone_number}: {otp}")  # Debug
+            # Never log OTP values. The SMS provider integration will deliver it out of band.
             
             return Response({
                 'success': True,
@@ -89,10 +89,7 @@ class VerifyOTPView(APIView):
                     }, status=status.HTTP_400_BAD_REQUEST)
             
             except User.DoesNotExist:
-                return Response({
-                    'success': False,
-                    'message': 'User not found'
-                }, status=status.HTTP_404_NOT_FOUND)
+                return Response({'success': False, 'message': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
         
         return Response({
             'success': False,
@@ -229,10 +226,7 @@ class LoginView(APIView):
                     }, status=status.HTTP_401_UNAUTHORIZED)
             
             except User.DoesNotExist:
-                return Response({
-                    'success': False,
-                    'message': 'User not found'
-                }, status=status.HTTP_404_NOT_FOUND)
+                return Response({'success': False, 'message': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
         
         return Response({
             'success': False,

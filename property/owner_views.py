@@ -17,6 +17,8 @@ from maintenance.serializers import MaintenanceTicketSerializer, MaintenanceTick
 from staff.models import Staff
 from staff.serializers import StaffSerializer
 from rooms.models import Room
+from organizations.access import properties_accessible_to
+from organizations.access import user_can
 
 class DashboardSummaryView(APIView):
     """API to fetch owner dashboard summary"""
@@ -91,11 +93,11 @@ class DashboardSummaryView(APIView):
 
 class PropertyManagementView(APIView):
     """API to create and manage properties"""
-    # permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
     
     def get(self, request):
         """Fetch all properties for the authenticated owner"""
-        properties = Property.objects.all()  # In production, filter by owner: .filter(owner=request.user)
+        properties = properties_accessible_to(request.user)
         serializer = PropertyListSerializer(properties, many=True)
         return Response({
             'success': True,
@@ -106,7 +108,10 @@ class PropertyManagementView(APIView):
         """Create new property"""
         serializer = PropertyCreateUpdateSerializer(data=request.data)
         if serializer.is_valid():
-            property_obj = serializer.save(owner=request.user)
+            membership = request.user.organization_memberships.filter(status='active', all_properties=True).select_related('organization').first()
+            if not membership:
+                return Response({'success': False, 'message': 'No organization with property management access'}, status=403)
+            property_obj = serializer.save(owner=request.user, organization=membership.organization)
             return Response({
                 'success': True,
                 'message': 'Property created successfully',
@@ -149,6 +154,8 @@ class SearchUsersView(APIView):
     permission_classes = [IsAuthenticated]
     
     def get(self, request):
+        if not user_can(request.user, 'tenant.manage'):
+            return Response({'success': False, 'message': 'Not permitted'}, status=403)
         phone_number = request.query_params.get('phone_number')
         
         if not phone_number:

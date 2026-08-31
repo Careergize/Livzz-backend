@@ -10,15 +10,18 @@ from .serializers import (
 )
 from Tenant.serializers import TenantSerializer
 from payments.serializers import PaymentSerializer, ComplaintSerializer, NotificationSerializer
+from organizations.access import properties_accessible_to
+from organizations.legacy import require_posted_property_access
 # --- PAYMENT API ---
 class PaymentListCreateView(APIView):
     def get(self, request):
         # FIX: Changed from 'created_at' to 'payment_date' to match your model
-        payments = Payment.objects.all().order_by('-payment_date')
+        payments = Payment.objects.filter(property__in=properties_accessible_to(request.user, 'billing.view')).order_by('-payment_date')
         serializer = PaymentSerializer(payments, many=True)
         return Response(serializer.data)
 
     def post(self, request):
+        require_posted_property_access(request, 'billing.collect')
         serializer = PaymentSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save() # Triggers signal to mark tenant paid
@@ -29,7 +32,7 @@ class PaymentListCreateView(APIView):
 class ComplaintListCreateView(APIView):
     def get(self, request):
         # Complaints usually have 'created_at'
-        complaints = Complaint.objects.all().order_by('-created_at')
+        complaints = Complaint.objects.filter(tenant__property__in=properties_accessible_to(request.user, 'maintenance.view')).order_by('-created_at')
         serializer = ComplaintSerializer(complaints, many=True)
         return Response(serializer.data)
 
@@ -44,18 +47,18 @@ class ComplaintListCreateView(APIView):
 class NotificationListView(APIView):
     def get(self, request):
         # Notifications usually have 'created_at'
-        notifications = Notification.objects.all().order_by('-created_at')
+        notifications = Notification.objects.filter(tenant__property__in=properties_accessible_to(request.user)).order_by('-created_at')
         serializer = NotificationSerializer(notifications, many=True)
         return Response(serializer.data)
 
     def post(self, request):
-        Notification.objects.filter(is_read=False).update(is_read=True)
+        Notification.objects.filter(tenant__property__in=properties_accessible_to(request.user), is_read=False).update(is_read=True)
         return Response({"message": "Notifications marked as read"})
 
 # --- COMPLAINT REPLY ---
 class ComplaintReplyView(APIView):
     def patch(self, request, pk):
-        complaint = get_object_or_404(Complaint, pk=pk)
+        complaint = get_object_or_404(Complaint, pk=pk, tenant__property__in=properties_accessible_to(request.user, 'maintenance.manage'))
         reply_text = request.data.get('reply')
         
         if not reply_text:

@@ -21,13 +21,14 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('api/v2/', include('api_v2.urls')),
     
     # API v1 endpoints
 
         path('auth/', include('accounts.urls')),
-        path('seeker/', include('property.urls')),
-        path('', include('property.urls')),
-        path('locations/', include('property.urls')),
+        path('seeker/', include(('property.urls', 'property'), namespace='property-seeker')),
+        path('', include(('property.urls', 'property'), namespace='property-legacy')),
+        path('locations/', include(('property.urls', 'property'), namespace='property-locations')),
         path('', include('rooms.urls')),
         path('', include('Tenant.urls')),
         path('', include('visitor.urls')),
