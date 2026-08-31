@@ -23,3 +23,8 @@ A property has one current organization and a stable UUID public ID. `Property.o
 ## Response contract
 
 V2 single resources use `{ "data": {} }`; lists use `{ "data": [], "meta": { "count", "page", "page_size" } }`; errors use an `errors` array containing `code`, `field`, and `message`.
+# Phase 2 property platform
+
+The V2 domain now uses `Organization -> Property -> Unit -> InventoryItem` as its canonical physical-asset hierarchy. Property access continues to use the Phase 1 membership, named-permission, and property-grant services. Marketplace pricing, availability, occupancy, tenancy, and financial workflows remain deliberately outside this boundary.
+
+See [phase-2-properties.md](phase-2-properties.md) for models, compatibility rules, and endpoints.
