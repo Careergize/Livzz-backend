@@ -1,5 +1,9 @@
 # Livzz API v2 architecture
 
+Self-service listing and user business identity are described in
+[`self-service-listing.md`](self-service-listing.md). The flow reuses the canonical
+Phase 1 access layer and Phase 2/3 property and marketplace models/services.
+
 Livzz remains a Django modular monolith. New contracts live below `/api/v2/`; legacy numeric-ID endpoints remain compatibility interfaces.
 
 ## Identity and organizations

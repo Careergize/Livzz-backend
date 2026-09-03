@@ -60,3 +60,24 @@ class User(AbstractUser):
         db_table = 'accounts_user'
         verbose_name = 'User'
         verbose_name_plural = 'Users'
+
+
+class ListerProfile(models.Model):
+    OWNER, BROKER, PROPERTY_MANAGER = 'OWNER', 'BROKER', 'PROPERTY_MANAGER'
+    LISTER_TYPES = tuple((value, value.replace('_', ' ').title()) for value in
+                         (OWNER, BROKER, PROPERTY_MANAGER))
+    UNVERIFIED, PENDING, VERIFIED, REJECTED = 'UNVERIFIED', 'PENDING', 'VERIFIED', 'REJECTED'
+    VERIFICATION_STATUSES = tuple((value, value.replace('_', ' ').title()) for value in
+                                  (UNVERIFIED, PENDING, VERIFIED, REJECTED))
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='lister_profile')
+    lister_type = models.CharField(max_length=30, choices=LISTER_TYPES)
+    agency_name = models.CharField(max_length=255, blank=True)
+    business_phone = models.CharField(max_length=20, blank=True)
+    business_email = models.EmailField(blank=True)
+    registration_number = models.CharField(max_length=100, blank=True)
+    verification_status = models.CharField(max_length=20, choices=VERIFICATION_STATUSES,
+                                           default=UNVERIFIED)
+    internal_verification_notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)

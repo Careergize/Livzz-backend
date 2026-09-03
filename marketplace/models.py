@@ -24,6 +24,8 @@ class Listing(models.Model):
     published_at = models.DateTimeField(null=True, blank=True, db_index=True)
     unpublished_at = models.DateTimeField(null=True, blank=True)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='created_listings')
+    lister_profile = models.ForeignKey('accounts.ListerProfile', null=True, blank=True,
+                                       on_delete=models.PROTECT, related_name='listings')
     legacy_source = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -192,7 +194,10 @@ class ListingMedia(models.Model):
     class Meta:
         ordering = ('sort_order', 'id')
         indexes = [models.Index(fields=('listing', 'sort_order'))]
-        constraints = [models.CheckConstraint(condition=(Q(property_media__isnull=False, file='') | Q(property_media__isnull=True) & ~Q(file='')), name='listing_media_one_source')]
+        constraints = [
+            models.CheckConstraint(condition=(Q(property_media__isnull=False, file='') | Q(property_media__isnull=True) & ~Q(file='')), name='listing_media_one_source'),
+            models.UniqueConstraint(fields=('listing',), condition=Q(is_primary=True), name='one_primary_listing_media'),
+        ]
 
     def clean(self):
         if bool(self.property_media_id) == bool(self.file):
@@ -203,3 +208,14 @@ class ListingMedia(models.Model):
     def save(self, *args, **kwargs):
         self.full_clean()
         return super().save(*args, **kwargs)
+
+
+class ListingDraft(models.Model):
+    STEPS = tuple((value, value.replace('_', ' ').title()) for value in (
+        'PROPERTY_TYPE', 'LOCATION', 'PROPERTY_DETAILS', 'SPACE_DETAILS', 'AMENITIES',
+        'MEDIA', 'PRICING', 'AVAILABILITY', 'PREVIEW', 'PUBLISH'))
+    public_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    listing = models.OneToOneField(Listing, on_delete=models.CASCADE, related_name='draft')
+    current_step = models.CharField(max_length=30, choices=STEPS, default='PROPERTY_TYPE')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)

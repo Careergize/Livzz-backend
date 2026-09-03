@@ -36,13 +36,11 @@ class MeView(V2APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        from .self_service import user_data
         memberships = memberships_for(request.user).select_related('organization')
         user = request.user
-        return data_response({'user': {
-            'id': user.pk, 'username': user.username, 'phone_number': user.phone_number,
-            'first_name': user.first_name, 'last_name': user.last_name, 'email': user.email,
-            'legacy_role': user.role,
-        }, 'memberships': MembershipSerializer(memberships, many=True).data})
+        return data_response({'user': user_data(user),
+                              'memberships': MembershipSerializer(memberships, many=True).data})
 
 
 class MembershipListView(V2APIView):

@@ -6,8 +6,15 @@ from .views import (InventoryListView, MeView, MembershipListView, OrganizationD
 from marketplace.api import (ListingActionView, ListingAvailabilityView, ListingPriceView,
                              OrganizationListingDetailView, OrganizationListingListView,
                              PublicListingDetailView, PublicListingListView)
+from .self_service import (DraftDetailView, DraftListCreateView, DraftMediaDetailView,
+                           DraftMediaView, DraftPublishView, ListerProfileView, LoginView,
+                           LogoutView, MyListingsView, RegisterView)
 
-auth_patterns = []  # Reserved v2 boundary; legacy authentication remains under /auth/.
+auth_patterns = [
+    path('register/', RegisterView.as_view(), name='register'),
+    path('login/', LoginView.as_view(), name='login'),
+    path('logout/', LogoutView.as_view(), name='logout'),
+]
 class PGListings(PublicListingListView): category = 'PG'
 class ApartmentListings(PublicListingListView): category = 'APARTMENT'
 class VillaListings(PublicListingListView): category = 'VILLA'
@@ -28,6 +35,14 @@ portal_patterns = []  # Tenancy portal intentionally deferred.
 urlpatterns = [
     path('auth/', include((auth_patterns, 'v2-auth'))),
     path('me/', MeView.as_view(), name='v2-me'),
+    path('me/lister-profile/', ListerProfileView.as_view(), name='v2-lister-profile'),
+    path('me/listing-drafts/', DraftListCreateView.as_view(), name='v2-my-listing-drafts'),
+    path('me/listings/', MyListingsView.as_view(), name='v2-my-listings'),
+    path('listing-drafts/', DraftListCreateView.as_view(), name='v2-listing-drafts'),
+    path('listing-drafts/<uuid:draft_id>/', DraftDetailView.as_view(), name='v2-listing-draft-detail'),
+    path('listing-drafts/<uuid:draft_id>/publish/', DraftPublishView.as_view(), name='v2-listing-draft-publish'),
+    path('listing-drafts/<uuid:draft_id>/media/', DraftMediaView.as_view(), name='v2-listing-draft-media'),
+    path('listing-drafts/<uuid:draft_id>/media/<int:media_id>/', DraftMediaDetailView.as_view(), name='v2-listing-draft-media-detail'),
     path('me/memberships/', MembershipListView.as_view(), name='v2-me-memberships'),
     path('organizations/', OrganizationListView.as_view(), name='v2-organizations'),
     path('organizations/<uuid:organization_id>/', OrganizationDetailView.as_view(), name='v2-organization-detail'),

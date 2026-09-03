@@ -51,7 +51,8 @@ class Property(models.Model):
 
     public_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     # LEGACY compatibility owner. V2 authorization uses organization.
-    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='properties')
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True,
+                              on_delete=models.SET_NULL, related_name='properties')
     organization = models.ForeignKey('organizations.Organization', on_delete=models.PROTECT, related_name='properties')
     name = models.CharField(max_length=255)
     property_type = models.CharField(max_length=50, choices=PROPERTY_TYPE_CHOICES)
