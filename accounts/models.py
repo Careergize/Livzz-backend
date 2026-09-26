@@ -22,7 +22,11 @@ class User(AbstractUser):
         ('Driving License', 'Driving License'),
     )
 
-    phone_number = models.CharField(max_length=15, unique=True)
+    phone_number = models.CharField(
+    max_length=15,
+    unique=True,
+    blank=True,
+    null=True)
     whatsapp_number = models.CharField(max_length=15, blank=True, null=True)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='seeker')
     

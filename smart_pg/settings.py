@@ -53,6 +53,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+      "whitenoise.middleware.WhiteNoiseMiddleware",
 ]
 
 ROOT_URLCONF = 'smart_pg.urls'
@@ -75,17 +76,12 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'smart_pg.wsgi.application'
 
-# 3. Database
-import dj_database_url
-
 DATABASES = {
-    'default': dj_database_url.config(
-        default='sqlite:///' + str(BASE_DIR / 'db.sqlite3'),
-        conn_max_age=600,
-        ssl_require=os.environ.get('DB_SSL_REQUIRE', 'False') == 'True',
-    )
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
+    }
 }
-
 # 4. Authentication
 AUTH_USER_MODEL = 'accounts.User'
 
