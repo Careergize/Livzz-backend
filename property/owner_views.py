@@ -1,7 +1,7 @@
 """Owner/Host API Views"""
 from rest_framework import status
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from django.db.models import Sum, Count, F
 from datetime import datetime
@@ -91,12 +91,19 @@ class DashboardSummaryView(APIView):
 
 class PropertyManagementView(APIView):
     """API to create and manage properties"""
-    # permission_classes = [IsAuthenticated]
+    def get_permissions(self):
+        return [AllowAny()] if self.request.method == 'GET' else [IsAuthenticated()]
     
     def get(self, request):
         """Fetch all properties for the authenticated owner"""
-        properties = Property.objects.all()  # In production, filter by owner: .filter(owner=request.user)
-        serializer = PropertyListSerializer(properties, many=True)
+        properties = Property.objects.filter(is_active=True).select_related('owner', 'location')
+        property_type = request.query_params.get('property_type')
+        city = request.query_params.get('city')
+        if property_type:
+            properties = properties.filter(property_type=property_type)
+        if city:
+            properties = properties.filter(city__icontains=city)
+        serializer = PropertyListSerializer(properties, many=True, context={'request': request})
         return Response({
             'success': True,
             'data': serializer.data

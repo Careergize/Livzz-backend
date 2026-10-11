@@ -18,6 +18,12 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from property.urls import urlpatterns as property_patterns
+from property.global_views import LocationsView
+
+# Root CRUD routes belong to their domain apps. Owner workflows remain under
+# /seeker/ for compatibility with existing clients.
+public_property_patterns = [route for route in property_patterns if str(route.pattern) not in ('', 'tenants/', 'payments/')]
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -25,9 +31,9 @@ urlpatterns = [
     # API v1 endpoints
 
         path('auth/', include('accounts.urls')),
-        path('seeker/', include('property.urls')),
-        path('', include('property.urls')),
-        path('locations/', include('property.urls')),
+        path('seeker/', include('property.urls', namespace='seeker')),
+        path('', include((public_property_patterns, 'property'), namespace='property')),
+        path('locations/', LocationsView.as_view(), name='locations'),
         path('', include('rooms.urls')),
         path('', include('Tenant.urls')),
         path('', include('visitor.urls')),
